@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 pub enum MonsterElement {
     Normal,
     Fire,
@@ -49,11 +51,39 @@ impl MonsterStats {
 }
 
 pub struct Monster {
-    nickname: Option<String>,
-    id: u16,
+    nickname: String,
+    id: Uuid,
     level: u8,
     xp: u16,
     next_xp: u16,
     iv: MonsterStats,
     iv_mod: MonsterStats,
+}
+
+impl Default for Monster {
+    fn default() -> Self {
+        Self {
+            nickname: String::new(),
+            id: Uuid::new_v4(),
+            level: 1,
+            xp: 0,
+            next_xp: 50,
+            iv: MonsterStats::new(),
+            iv_mod: MonsterStats::new()
+        }
+    }
+}
+
+impl Monster {
+    pub fn new(name: &str) -> Self {
+        Self {
+            nickname: String::from(name),
+            id: Uuid::new_v4(),
+            level: 1,
+            xp: 0,
+            next_xp: 50,
+            iv: MonsterStats::new(),
+            iv_mod: MonsterStats::new(),
+        }
+    }
 }
