@@ -1,6 +1,4 @@
-pub mod game;
+#[macro_use]
+extern crate lazy_static;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-}
+pub mod game;
