@@ -2,86 +2,7 @@ use uuid::Uuid;
 use rand::prelude::*;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use super::pokedex::PokedexData;
-
-#[repr(u8)]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum MonsterElement {
-    Normal,
-    Fire,
-    Water,
-    Electric,
-    Grass,
-    Ice,
-    Fighting,
-    Poison,
-    Ground,
-    Flying,
-    Psychic,
-    Bug,
-    Rock,
-    Ghost,
-    Dragon,
-    Dark,
-    Steel,
-    Fairy,
-}
-
-impl From<&str> for MonsterElement {
-    fn from(v: &str) -> Self {
-        match v {
-            "Normal" => MonsterElement::Normal,
-            "Fire" => MonsterElement::Fire,
-            "Water" => MonsterElement::Water,
-            "Electric" => MonsterElement::Electric,
-            "Grass" => MonsterElement::Grass,
-            "Ice" => MonsterElement::Ice,
-            "Fighting" => MonsterElement::Fighting,
-            "Poison" => MonsterElement::Poison,
-            "Ground" => MonsterElement::Ground,
-            "Flying" => MonsterElement::Flying,
-            "Psychic" => MonsterElement::Psychic,
-            "Bug" => MonsterElement::Bug,
-            "Rock" => MonsterElement::Rock,
-            "Ghost" => MonsterElement::Ghost,
-            "Dragon" => MonsterElement::Dragon,
-            "Dark" => MonsterElement::Dark,
-            "Steel" => MonsterElement::Steel,
-            "Fairy" => MonsterElement::Fairy,
-            _ => panic!("Unsupported element type."),
-        }
-    }
-}
-
-const POKEMON_ELEMENTS: [&'static str; 18] = [
-    "Normal",
-    "Fire",
-    "Water",
-    "Electric",
-    "Grass",
-    "Ice",
-    "Fighting",
-    "Poison",
-    "Ground",
-    "Flying",
-    "Psychic",
-    "Bug",
-    "Rock",
-    "Ghost",
-    "Dragon",
-    "Dark",
-    "Steel",
-    "Fairy",
-];
-
-impl MonsterElement {
-    pub fn generate() -> (MonsterElement, MonsterElement) {
-        let mut rng = thread_rng();
-        let i1: usize = rng.gen_range(0..POKEMON_ELEMENTS.len());
-        let i2: usize = rng.gen_range(0..POKEMON_ELEMENTS.len());
-        (MonsterElement::from(POKEMON_ELEMENTS[i1]), MonsterElement::from(POKEMON_ELEMENTS[i2]))
-    }
-}
+use super::{pokedex::PokedexData, ElementType, moves::{PokemonMove, POKEMON_MOVES}};
 
 #[repr(u8)]
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -261,12 +182,10 @@ pub struct MonsterStats {
     pub internal: [u8; 6],
 }
 
-unsafe impl Send for MonsterElement {}
 unsafe impl Send for MonsterAttribute {}
 unsafe impl Send for MonsterStats {}
 unsafe impl Send for MonsterNature {}
 
-unsafe impl Sync for MonsterElement {}
 unsafe impl Sync for MonsterNature {}
 unsafe impl Sync for MonsterAttribute {}
 unsafe impl Sync for MonsterStats {}
@@ -396,7 +315,7 @@ pub struct Monster {
     pub next_xp: u16,
     /// This monster's type pairing.
     /// Duplicate elements are used for a single-type monster.
-    pub elements: (MonsterElement, MonsterElement),
+    pub elements: (ElementType, ElementType),
     /// This monster's gender.
     pub gender: MonsterGender,
     /// This monster's nature.
@@ -460,6 +379,24 @@ impl Monster {
             }
         }
     }
+    pub fn get_move(&self, index: usize) -> Option<PokemonMove> {
+        let move_id: usize = match index {
+            0 => self.moves.0,
+            1 => self.moves.1,
+            2 => self.moves.2,
+            3 => self.moves.3,
+            _ => panic!("Index out of range."),
+        } as usize;
+        if move_id == 0 {
+            None
+        } else {
+            if let Some(entry) = (*POKEMON_MOVES).get(&move_id) {
+                Some(entry.clone())
+            } else {
+                None
+            }
+        }
+    }
     pub fn new() -> Self {
         let iv = MonsterStats::random_iv();
         let ev = MonsterStats::new();
@@ -475,9 +412,9 @@ impl Monster {
             next_xp: 50,
             nature: MonsterNature::generate(),
             gender: MonsterGender::generate(),
-            moves: (0, 0, 0, 0),
+            moves: (33, 0, 0, 0),
             held_item: None,
-            elements: MonsterElement::generate(),
+            elements: ElementType::generate(),
             base_stats: stats,
             iv,
             ev,

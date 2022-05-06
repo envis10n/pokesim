@@ -1,4 +1,4 @@
-use super::monster::*;
+use super::{monster::*, ElementType};
 use serde_json::Value;
 use std::fs;
 use std::collections::HashMap;
@@ -8,7 +8,7 @@ const POKEDEX_LANG: &'static str = "english";
 lazy_static! {
     pub static ref POKEDEX: HashMap<usize, PokedexData> = {
         let mut map: HashMap<usize, PokedexData> = HashMap::new();
-        let pjson: Value = serde_json::from_slice(&fs::read("pokedex.json").unwrap()[..]).unwrap();
+        let pjson: Value = serde_json::from_slice(&fs::read("data/pokedex.json").unwrap()[..]).unwrap();
         let pjson = pjson.as_array().unwrap();
         for obj in pjson.iter() {
             let entry = PokedexData::from_json(obj);
@@ -22,7 +22,7 @@ lazy_static! {
 pub struct PokedexData {
     pub id: usize,
     pub name: String,
-    pub element: (MonsterElement, MonsterElement),
+    pub element: (ElementType, ElementType),
     pub base: MonsterStats,
 }
 
@@ -58,7 +58,7 @@ impl PokedexData {
         Self {
             id,
             name,
-            element: (MonsterElement::from(elements.0), MonsterElement::from(elements.1)),
+            element: (ElementType::from(elements.0), ElementType::from(elements.1)),
             base: MonsterStats { internal: base_stats },
         }
     }
