@@ -3,6 +3,29 @@ use rand::prelude::*;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use super::{pokedex::PokedexData, ElementType, moves::{PokemonMove, POKEMON_MOVES}};
+use enumflags2::{bitflags, BitFlags};
+
+#[bitflags]
+#[repr(u16)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum MonsterStatus {
+    BRN,
+    FRZ,
+    PAR,
+    PSN,
+    SLP,
+    BND,
+    CTRN,
+    CON,
+    CRS,
+    DRSY,
+    ENC,
+    FLN,
+}
+
+pub trait MonsterStatType {
+    fn to_string(&self) -> String;
+}
 
 #[repr(u8)]
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -14,6 +37,69 @@ pub enum MonsterAttribute {
     SpATT,
     SpDEF,
 }
+
+#[repr(u8)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub enum MonsterCombatStat {
+    ATT,
+    DEF,
+    ACC,
+    SPD,
+    SpATT,
+    SpDEF,
+    EV,
+}
+
+impl MonsterStatType for MonsterCombatStat {
+    fn to_string(&self) -> String {
+        match self.clone() {
+            MonsterCombatStat::ACC => "Accuracy".to_string(),
+            MonsterCombatStat::ATT => "Attack".to_string(),
+            MonsterCombatStat::DEF => "Defense".to_string(),
+            MonsterCombatStat::SPD => "Speed".to_string(),
+            MonsterCombatStat::SpATT => "Sp. Attack".to_string(),
+            MonsterCombatStat::SpDEF => "Sp. Defense".to_string(),
+            MonsterCombatStat::EV => "Evasion".to_string(),
+        }
+    }
+}
+
+impl MonsterStatType for MonsterAttribute {
+    fn to_string(&self) -> String {
+        match self.clone() {
+            MonsterAttribute::HP => "HP".to_string(),
+            MonsterAttribute::ATT => "Attack".to_string(),
+            MonsterAttribute::DEF => "Defense".to_string(),
+            MonsterAttribute::SPD => "Speed".to_string(),
+            MonsterAttribute::SpATT => "Sp. Attack".to_string(),
+            MonsterAttribute::SpDEF => "Sp. Defense".to_string(),
+        }
+    }
+}
+
+impl From<&str> for MonsterAttribute {
+    fn from(v: &str) -> Self {
+        match v {
+            "HP" => MonsterAttribute::HP,
+            "Attack" => MonsterAttribute::ATT,
+            "Defense" => MonsterAttribute::DEF,
+            "Speed" => MonsterAttribute::SPD,
+            "Sp. Attack" => MonsterAttribute::SpATT,
+            "Sp. Defense" => MonsterAttribute::SpDEF,
+            _ => panic!("Out of range."),
+        }
+    }
+}
+
+#[allow(dead_code)]
+const POKEMON_ATTRIBUTES: [&'static str; 6] = [
+    "HP",
+    "Attack",
+    "Defense",
+    "Speed",
+    "Sp. Attack",
+    "Sp. Defense",
+];
 
 impl From<u8> for MonsterAttribute {
     fn from(v: u8) -> Self {
@@ -178,6 +264,29 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MonsterStatMods {
+    pub internal: HashMap<String, i16>,
+}
+
+impl MonsterStatMods {
+    pub fn new() -> Self {
+        Self { internal: HashMap::new() }
+    }
+    pub fn get<T>(&self, key: T) -> Option<i16> where T: MonsterStatType {
+        let key = key.to_string();
+        if let Some(v) = self.internal.get(&key) {
+            Some(*v)
+        } else {
+            None
+        }
+    }
+    pub fn set<T>(&mut self, key: T, value: i16) -> bool where T: MonsterStatType {
+        let key = key.to_string();
+        self.internal.insert(key, value).is_none()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MonsterStats {
     pub internal: [u8; 6],
 }
@@ -331,6 +440,12 @@ pub struct Monster {
     pub iv: MonsterStats,
     /// This monster's EVs.
     pub ev: MonsterStats,
+    /// This monster's combat stat modifiers.
+    pub combat_mods: MonsterStatMods,
+    /// This monster's combat status.
+    pub in_combat: bool,
+    /// This monster's combat status flags.
+    pub combat_status: BitFlags<MonsterStatus>,
 }
 
 unsafe impl Send for Monster {}
@@ -418,6 +533,9 @@ impl Monster {
             base_stats: stats,
             iv,
             ev,
+            combat_mods: MonsterStatMods::new(),
+            in_combat: false,
+            combat_status: BitFlags::empty(),
         };
         mon.hp = mon.get_stat(MonsterAttribute::HP);
         mon
@@ -426,13 +544,22 @@ impl Monster {
 
 #[cfg(test)]
 mod tests {
-    use super::Monster;
+    use super::{Monster, MonsterStatus};
     use serde_json;
 
     #[test]
     fn test_serialize() {
-        let t = Monster::from_dex(1);
-        let json = serde_json::to_string(&t).unwrap();
+        let mut t = Monster::from_dex(1);
+        t.combat_status.insert(MonsterStatus::BRN | MonsterStatus::BND);
+        let json = {
+            if cfg!(debug) {
+                let temp = serde_json::to_string_pretty(&t).unwrap();
+                println!("{}", temp);
+                temp
+            } else {
+                serde_json::to_string(&t).unwrap()
+            }
+        };
         let t2: Monster = serde_json::from_str(&json).unwrap();
         assert_eq!(t, t2);
     }
