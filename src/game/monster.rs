@@ -1,9 +1,13 @@
-use uuid::Uuid;
-use rand::prelude::*;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
-use super::{pokedex::PokedexData, ElementType, moves::{PokemonMove, POKEMON_MOVES}};
+use super::{
+    moves::{MoveCategory, PokemonMove, POKEMON_MOVES},
+    pokedex::PokedexData,
+    ElementType,
+};
 use enumflags2::{bitflags, BitFlags};
+use rand::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 #[bitflags]
 #[repr(u16)]
@@ -28,7 +32,7 @@ pub trait MonsterStatType {
 }
 
 #[repr(u8)]
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Debug)]
 pub enum MonsterAttribute {
     HP,
     ATT,
@@ -36,43 +40,123 @@ pub enum MonsterAttribute {
     SPD,
     SpATT,
     SpDEF,
-}
-
-#[repr(u8)]
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub enum MonsterCombatStat {
-    ATT,
-    DEF,
     ACC,
-    SPD,
-    SpATT,
-    SpDEF,
     EV,
 }
 
-impl MonsterStatType for MonsterCombatStat {
-    fn to_string(&self) -> String {
-        match self.clone() {
-            MonsterCombatStat::ACC => "Accuracy".to_string(),
-            MonsterCombatStat::ATT => "Attack".to_string(),
-            MonsterCombatStat::DEF => "Defense".to_string(),
-            MonsterCombatStat::SPD => "Speed".to_string(),
-            MonsterCombatStat::SpATT => "Sp. Attack".to_string(),
-            MonsterCombatStat::SpDEF => "Sp. Defense".to_string(),
-            MonsterCombatStat::EV => "Evasion".to_string(),
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub struct MonsterStages {
+    pub internal: HashMap<MonsterAttribute, i8>,
+}
+
+impl Default for MonsterStages {
+    fn default() -> Self {
+        Self {
+            internal: HashMap::from_iter([
+                (MonsterAttribute::ATT, 0),
+                (MonsterAttribute::DEF, 0),
+                (MonsterAttribute::SPD, 0),
+                (MonsterAttribute::SpATT, 0),
+                (MonsterAttribute::SpDEF, 0),
+                (MonsterAttribute::ACC, 0),
+                (MonsterAttribute::EV, 0),
+            ]),
         }
     }
 }
 
-impl MonsterStatType for MonsterAttribute {
-    fn to_string(&self) -> String {
-        match self.clone() {
-            MonsterAttribute::HP => "HP".to_string(),
-            MonsterAttribute::ATT => "Attack".to_string(),
-            MonsterAttribute::DEF => "Defense".to_string(),
-            MonsterAttribute::SPD => "Speed".to_string(),
-            MonsterAttribute::SpATT => "Sp. Attack".to_string(),
-            MonsterAttribute::SpDEF => "Sp. Defense".to_string(),
+impl MonsterStages {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn apply_stages(&mut self, stat: MonsterAttribute, stages: i8) {
+        if let Some(current) = self.internal.get(&stat) {
+            let new = {
+                let temp = *current + stages;
+                if temp > 6 {
+                    6
+                } else if temp < -6 {
+                    -6
+                } else {
+                    temp
+                }
+            };
+            self.internal.insert(stat.clone(), new);
+        } else {
+            panic!("Invalid attribute.")
+        }
+    }
+    pub fn reset(&mut self) {
+        self.internal = HashMap::from_iter([
+            (MonsterAttribute::ATT, 0),
+            (MonsterAttribute::DEF, 0),
+            (MonsterAttribute::SPD, 0),
+            (MonsterAttribute::SpATT, 0),
+            (MonsterAttribute::SpDEF, 0),
+            (MonsterAttribute::ACC, 0),
+            (MonsterAttribute::EV, 0),
+        ]);
+    }
+    pub fn get_mod(&self, stat: MonsterAttribute) -> f32 {
+        if let Some(val) = self.internal.get(&stat) {
+            let val = *val;
+            match stat {
+                MonsterAttribute::ATT
+                | MonsterAttribute::DEF
+                | MonsterAttribute::SPD
+                | MonsterAttribute::SpATT
+                | MonsterAttribute::SpDEF => match val {
+                    6 => 8.0 / 2.0,
+                    5 => 7.0 / 2.0,
+                    4 => 6.0 / 2.0,
+                    3 => 5.0 / 2.0,
+                    2 => 4.0 / 2.0,
+                    1 => 3.0 / 2.0,
+                    0 => 1.0,
+                    -1 => 2.0 / 3.0,
+                    -2 => 2.0 / 4.0,
+                    -3 => 2.0 / 5.0,
+                    -4 => 2.0 / 6.0,
+                    -5 => 2.0 / 7.0,
+                    -6 => 2.0 / 8.0,
+                    _ => panic!("out of range"),
+                },
+                MonsterAttribute::ACC => match val {
+                    6 => 300.0 / 100.0,
+                    5 => 266.0 / 100.0,
+                    4 => 250.0 / 100.0,
+                    3 => 200.0 / 100.0,
+                    2 => 166.0 / 100.0,
+                    1 => 133.0 / 100.0,
+                    0 => 1.0,
+                    -1 => 0.75,
+                    -2 => 0.6,
+                    -3 => 0.5,
+                    -4 => 0.43,
+                    -5 => 0.36,
+                    -6 => 0.33,
+                    _ => panic!("out of range"),
+                },
+                MonsterAttribute::EV => match val {
+                    -6 => 300.0 / 100.0,
+                    -5 => 266.0 / 100.0,
+                    -4 => 250.0 / 100.0,
+                    -3 => 200.0 / 100.0,
+                    -2 => 166.0 / 100.0,
+                    -1 => 133.0 / 100.0,
+                    0 => 1.0,
+                    1 => 0.75,
+                    2 => 0.6,
+                    3 => 0.5,
+                    4 => 0.43,
+                    5 => 0.36,
+                    6 => 0.33,
+                    _ => panic!("out of range"),
+                },
+                MonsterAttribute::HP => panic!("Health has no stage modifiers."),
+            }
+        } else {
+            panic!("Attribute not mapped.")
         }
     }
 }
@@ -108,7 +192,7 @@ impl From<u8> for MonsterAttribute {
             1 => MonsterAttribute::ATT,
             2 => MonsterAttribute::DEF,
             3 => MonsterAttribute::SPD,
-            4 => MonsterAttribute:: SpATT,
+            4 => MonsterAttribute::SpATT,
             5 => MonsterAttribute::SpDEF,
             _ => panic!("Value out of range."),
         }
@@ -191,31 +275,9 @@ impl From<&str> for MonsterNature {
 }
 
 const POKEMON_NATURES: [&'static str; 25] = [
-    "Adamant",
-    "Bashful",
-    "Bold",
-    "Brave",
-    "Calm",
-    "Careful",
-    "Docile",
-    "Gentle",
-    "Hardy",
-    "Hasty",
-    "Impish",
-    "Jolly",
-    "Lax",
-    "Lonely",
-    "Mild",
-    "Modest",
-    "Naive",
-    "Naughty",
-    "Quiet",
-    "Quirky",
-    "Rash",
-    "Relaxed",
-    "Sassy",
-    "Serious",
-    "Timid"
+    "Adamant", "Bashful", "Bold", "Brave", "Calm", "Careful", "Docile", "Gentle", "Hardy", "Hasty",
+    "Impish", "Jolly", "Lax", "Lonely", "Mild", "Modest", "Naive", "Naughty", "Quiet", "Quirky",
+    "Rash", "Relaxed", "Sassy", "Serious", "Timid",
 ];
 
 impl MonsterNature {
@@ -257,33 +319,13 @@ lazy_static! {
     pub static ref NATURE_MODIFERS: HashMap<MonsterNature, (MonsterAttribute, MonsterAttribute)> = {
         let mut map: HashMap<MonsterNature, (MonsterAttribute, MonsterAttribute)> = HashMap::new();
         for entry in (*NATURE_ARR).iter() {
-            map.insert(MonsterNature::from(entry.0), (entry.1.clone(), entry.2.clone()));
+            map.insert(
+                MonsterNature::from(entry.0),
+                (entry.1.clone(), entry.2.clone()),
+            );
         }
         map
     };
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct MonsterStatMods {
-    pub internal: HashMap<String, i16>,
-}
-
-impl MonsterStatMods {
-    pub fn new() -> Self {
-        Self { internal: HashMap::new() }
-    }
-    pub fn get<T>(&self, key: T) -> Option<i16> where T: MonsterStatType {
-        let key = key.to_string();
-        if let Some(v) = self.internal.get(&key) {
-            Some(*v)
-        } else {
-            None
-        }
-    }
-    pub fn set<T>(&mut self, key: T, value: i16) -> bool where T: MonsterStatType {
-        let key = key.to_string();
-        self.internal.insert(key, value).is_none()
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -339,9 +381,7 @@ impl MonsterStats {
             internal[i] = rng.gen_range(min..=max);
         }
         internal.reverse();
-        Self {
-            internal
-        }
+        Self { internal }
     }
     pub fn random_iv() -> Self {
         Self::random(31, 0)
@@ -379,7 +419,9 @@ impl MonsterStats {
         if bytes.len() != 6 {
             Err(error::MonsterError::StatParseError)
         } else {
-            Ok(Self { internal: [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]] })
+            Ok(Self {
+                internal: [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]],
+            })
         }
     }
 }
@@ -441,7 +483,7 @@ pub struct Monster {
     /// This monster's EVs.
     pub ev: MonsterStats,
     /// This monster's combat stat modifiers.
-    pub combat_mods: MonsterStatMods,
+    pub combat_mods: MonsterStages,
     /// This monster's combat status.
     pub in_combat: bool,
     /// This monster's combat status flags.
@@ -489,7 +531,8 @@ impl Monster {
                         1f32
                     }
                 };
-                let res = (((0.01f32 * (2f32 * base + iv + ev) * level)).floor() + 5f32) * nature_bonus;
+                let res =
+                    ((0.01f32 * (2f32 * base + iv + ev) * level).floor() + 5f32) * nature_bonus;
                 res.round() as u16
             }
         }
@@ -512,6 +555,40 @@ impl Monster {
             }
         }
     }
+    pub fn did_hit(&self, move_acc: u8, target_evade: f32) -> bool {
+        let mut rng = thread_rng();
+        let comp: u8 = rng.gen_range(1..=100);
+        let stage_mod = self.combat_mods.get_mod(MonsterAttribute::ACC);
+        let fin = (move_acc as f32 * stage_mod * target_evade) as u8;
+        comp <= fin
+    }
+    pub fn deal_damage(
+        &self,
+        move_power: u8,
+        move_category: MoveCategory,
+        target_def: u16,
+        crit: bool,
+    ) -> u16 {
+        let mut rng = thread_rng();
+        let rnd = rng.gen_range(85..=100u8) as f32 / 100f32;
+        let att_power = match move_category {
+            MoveCategory::Physical => self.get_stat(MonsterAttribute::ATT),
+            _ => self.get_stat(MonsterAttribute::SpATT),
+        };
+        let att_def_mod = att_power / target_def;
+        let damage = (((2 * self.level as u16) / 5) + 2) * move_power as u16 * att_def_mod;
+        let damage = damage / 50 + 2;
+        let damage = (damage as f32 * {
+            if crit {
+                1.5f32
+            } else {
+                1.0f32
+            }
+        }) as u16;
+        let damage = (damage as f32 * rnd) as u16;
+        // TODO: Add type modifiers
+        damage
+    }
     pub fn new() -> Self {
         let iv = MonsterStats::random_iv();
         let ev = MonsterStats::new();
@@ -533,7 +610,7 @@ impl Monster {
             base_stats: stats,
             iv,
             ev,
-            combat_mods: MonsterStatMods::new(),
+            combat_mods: MonsterStages::new(),
             in_combat: false,
             combat_status: BitFlags::empty(),
         };
@@ -544,13 +621,49 @@ impl Monster {
 
 #[cfg(test)]
 mod tests {
-    use super::{Monster, MonsterStatus};
+    use super::{Monster, MonsterAttribute, MonsterStatus};
     use serde_json;
-
+    #[test]
+    fn test_stats() {
+        let mut t = Monster::from_dex(1);
+        t.level = 20;
+        let mut t2 = Monster::from_dex(4);
+        t2.combat_mods.apply_stages(MonsterAttribute::EV, 1);
+        t2.level = 20;
+        t.hp = t.max_hp();
+        t2.hp = t2.max_hp();
+        while t2.hp > 0 {
+            if let Some(move_a) = t.get_move(0) {
+                println!("[{} - {} / {}]", t2.base_name, t2.hp, t2.max_hp());
+                if t.did_hit(
+                    move_a.accuracy.unwrap(),
+                    t2.combat_mods.get_mod(MonsterAttribute::EV),
+                ) {
+                    let damage = t.deal_damage(
+                        move_a.power.unwrap(),
+                        move_a.category,
+                        t.get_stat(MonsterAttribute::DEF),
+                        false,
+                    );
+                    println!("{}'s {} hit!", t.base_name, move_a.name);
+                    if damage > t2.hp {
+                        break;
+                    }
+                    t2.hp -= damage;
+                } else {
+                    println!("{}'s attack missed!", t.base_name);
+                }
+            } else {
+                panic!("No move.")
+            }
+        }
+        println!("Enemy {} fainted.", t2.base_name);
+    }
     #[test]
     fn test_serialize() {
         let mut t = Monster::from_dex(1);
-        t.combat_status.insert(MonsterStatus::BRN | MonsterStatus::BND);
+        t.combat_status
+            .insert(MonsterStatus::BRN | MonsterStatus::BND);
         let json = {
             if cfg!(debug) {
                 let temp = serde_json::to_string_pretty(&t).unwrap();

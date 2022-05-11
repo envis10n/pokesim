@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
 use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub mod monster;
-pub mod pokedex;
 pub mod moves;
+pub mod pokedex;
 
 #[repr(u8)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
@@ -55,24 +55,8 @@ impl From<&str> for ElementType {
 }
 
 pub const POKEMON_ELEMENTS: [&'static str; 18] = [
-    "Normal",
-    "Fire",
-    "Water",
-    "Electric",
-    "Grass",
-    "Ice",
-    "Fighting",
-    "Poison",
-    "Ground",
-    "Flying",
-    "Psychic",
-    "Bug",
-    "Rock",
-    "Ghost",
-    "Dragon",
-    "Dark",
-    "Steel",
-    "Fairy",
+    "Normal", "Fire", "Water", "Electric", "Grass", "Ice", "Fighting", "Poison", "Ground",
+    "Flying", "Psychic", "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy",
 ];
 
 impl ElementType {
@@ -80,7 +64,10 @@ impl ElementType {
         let mut rng = thread_rng();
         let i1: usize = rng.gen_range(0..POKEMON_ELEMENTS.len());
         let i2: usize = rng.gen_range(0..POKEMON_ELEMENTS.len());
-        (ElementType::from(POKEMON_ELEMENTS[i1]), ElementType::from(POKEMON_ELEMENTS[i2]))
+        (
+            ElementType::from(POKEMON_ELEMENTS[i1]),
+            ElementType::from(POKEMON_ELEMENTS[i2]),
+        )
     }
 }
 

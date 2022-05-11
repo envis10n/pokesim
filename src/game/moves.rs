@@ -1,13 +1,14 @@
 use super::ElementType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fs;
 use std::collections::HashMap;
+use std::fs;
 
 lazy_static! {
     pub static ref POKEMON_MOVES: HashMap<usize, PokemonMove> = {
         let mut map: HashMap<usize, PokemonMove> = HashMap::new();
-        let pjson: Value = serde_json::from_slice(&fs::read("data/moves.json").unwrap()[..]).unwrap();
+        let pjson: Value =
+            serde_json::from_slice(&fs::read("data/moves.json").unwrap()[..]).unwrap();
         let pjson = pjson.as_array().unwrap();
         for obj in pjson.iter() {
             let entry = PokemonMove::from_json(obj);
@@ -22,30 +23,30 @@ lazy_static! {
 pub enum MoveCategory {
     Physical,
     Special,
-    Status
+    Status,
 }
 
 impl MoveCategory {
     pub fn get_element_category(element: ElementType) -> Self {
         match element {
-            ElementType::Normal |
-            ElementType::Fighting |
-            ElementType::Flying |
-            ElementType::Poison |
-            ElementType::Ground |
-            ElementType::Rock |
-            ElementType::Bug |
-            ElementType::Ghost |
-            ElementType::Steel => Self::Physical,
+            ElementType::Normal
+            | ElementType::Fighting
+            | ElementType::Flying
+            | ElementType::Poison
+            | ElementType::Ground
+            | ElementType::Rock
+            | ElementType::Bug
+            | ElementType::Ghost
+            | ElementType::Steel => Self::Physical,
 
-            ElementType::Fire |
-            ElementType::Water |
-            ElementType::Grass |
-            ElementType::Electric |
-            ElementType::Psychic |
-            ElementType::Ice |
-            ElementType::Dragon |
-            ElementType::Dark => Self::Special,
+            ElementType::Fire
+            | ElementType::Water
+            | ElementType::Grass
+            | ElementType::Electric
+            | ElementType::Psychic
+            | ElementType::Ice
+            | ElementType::Dragon
+            | ElementType::Dark => Self::Special,
             _ => Self::Special,
         }
     }
@@ -85,7 +86,7 @@ impl PokemonMove {
                 Some(obj["power"].as_u64().unwrap() as u8)
             }
         };
-        let pp= {
+        let pp = {
             if obj["pp"].is_null() {
                 None
             } else {
@@ -111,7 +112,7 @@ impl PokemonMove {
 #[cfg(test)]
 mod test {
     use crate::game::monster::Monster;
-    
+
     #[test]
     fn get_move() {
         let monster = Monster::from_dex(1);
