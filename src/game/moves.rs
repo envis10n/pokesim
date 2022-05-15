@@ -1,15 +1,14 @@
 use super::ElementType;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
+use super::data::MovesEntry;
 
 lazy_static! {
     pub static ref POKEMON_MOVES: HashMap<usize, PokemonMove> = {
         let mut map: HashMap<usize, PokemonMove> = HashMap::new();
-        let pjson: Value =
+        let pjson: Vec<MovesEntry> =
             serde_json::from_slice(&fs::read("data/moves.json").unwrap()[..]).unwrap();
-        let pjson = pjson.as_array().unwrap();
         for obj in pjson.iter() {
             let entry = PokemonMove::from_json(obj);
             map.insert(entry.id, entry);
@@ -67,34 +66,14 @@ pub struct PokemonMove {
 }
 
 impl PokemonMove {
-    pub fn from_json(obj: &Value) -> PokemonMove {
-        let obj = obj.as_object().unwrap();
-
-        let accuracy = {
-            if obj["accuracy"].is_null() {
-                None
-            } else {
-                Some(obj["accuracy"].as_u64().unwrap() as u8)
-            }
-        };
-        let id = obj["id"].as_u64().unwrap() as usize;
-        let name = obj["ename"].as_str().unwrap().to_string();
-        let power = {
-            if obj["power"].is_null() {
-                None
-            } else {
-                Some(obj["power"].as_u64().unwrap() as u8)
-            }
-        };
-        let pp = {
-            if obj["pp"].is_null() {
-                None
-            } else {
-                Some(obj["pp"].as_u64().unwrap() as u8)
-            }
-        };
-        let element_type = obj["type"].as_str().unwrap();
-        let element = ElementType::from(element_type);
+    pub fn from_json(obj: &MovesEntry) -> PokemonMove {
+        let accuracy = obj.accuracy;
+        let id = obj.id as usize;
+        let name = obj.ename.clone();
+        let power = obj.power;
+        let pp = obj.pp;
+        let element_type = obj._type.clone();
+        let element = ElementType::from(element_type.as_str());
         let category = MoveCategory::get_element_category(element.clone());
 
         Self {

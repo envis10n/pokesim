@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub mod monster;
 pub mod moves;
 pub mod pokedex;
+/// Deserialization structs for Pokemon data.
+pub mod data;
 
 #[repr(u8)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash)]
